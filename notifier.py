@@ -17,6 +17,7 @@ is computed against the previous digest.
 Designed to be run from cron once a day on an always-on VM. See README.md.
 """
 
+import calendar
 import json
 import os
 import sys
@@ -43,11 +44,18 @@ DISCOUNT_THRESHOLD = int(os.environ.get("DISCOUNT_THRESHOLD", "25"))
 COUNTRY = os.environ.get("STEAM_CC", "DE")
 LANG = os.environ.get("STEAM_LANG", "english")
 
+# Optional IsThereAnyDeal enrichment. If set, each sale line is tagged with how
+# the current price compares to the title's all-time low. Leave unset to disable.
+ITAD_API_KEY = os.environ.get("ITAD_API_KEY", "").strip()
+
 HTTP_TIMEOUT_SECONDS = 20
 USER_AGENT = "lan-sale-notifier/2.0 (+internal LAN tooling)"
 GETITEMS_URL = "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/"
 STORE_BASE = "https://store.steampowered.com/"
 BATCH_SIZE = 50  # appids per GetItems call
+
+ITAD_LOOKUP_URL = "https://api.isthereanydeal.com/games/lookup/v1"
+ITAD_HISTLOW_URL = "https://api.isthereanydeal.com/games/historylow/v1"
 
 
 # --- Data fetch ---------------------------------------------------------------
@@ -102,14 +110,104 @@ def parse_item(item):
     path = item.get("store_url_path")
     url = (STORE_BASE + path) if path else f"{STORE_BASE}app/{item.get('appid')}"
 
+    try:
+        final_cents = int(bpo.get("final_price_in_cents") or 0)
+    except (TypeError, ValueError):
+        final_cents = 0
+
     return {
         "name": item.get("name", str(item.get("appid"))),
         "discount_pct": pct,
         "final": bpo.get("formatted_final_price", ""),
         "original": bpo.get("formatted_original_price", ""),
+        "final_cents": final_cents,
         "end_ts": end_ts,
         "url": url,
+        "itad": None,  # filled in by ITAD enrichment if enabled
     }
+
+
+# --- IsThereAnyDeal enrichment (optional) ------------------------------------
+
+
+def itad_lookup(appid):
+    """Map a Steam appid to an ITAD game id (UUID), or None."""
+    url = ITAD_LOOKUP_URL + "?" + urllib.parse.urlencode({"key": ITAD_API_KEY, "appid": appid})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as resp:
+        data = json.load(resp)
+    return data.get("game", {}).get("id") if data.get("found") else None
+
+
+def itad_historylow(game_ids):
+    """Return {game_id: low_dict} for the given ITAD game ids."""
+    url = ITAD_HISTLOW_URL + "?" + urllib.parse.urlencode({"key": ITAD_API_KEY, "country": COUNTRY})
+    body = json.dumps(game_ids).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=body,
+        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT}, method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as resp:
+        data = json.load(resp)
+    return {row["id"]: row["low"] for row in data if row.get("low")}
+
+
+def fmt_eur(amount):
+    return f"{amount:.2f}".replace(".", ",") + "€"
+
+
+def itad_tag(info, low):
+    """Build the historical-low tag for one sale line."""
+    low_amt = low["price"]["amount"]
+    when = ""
+    ts = low.get("timestamp", "")
+    if len(ts) >= 7:
+        try:
+            when = f" ({calendar.month_abbr[int(ts[5:7])]} {ts[:4]})"
+        except (ValueError, IndexError):
+            when = ""
+    current = info["final_cents"] / 100 if info.get("final_cents") else None
+    # Within a cent of the all-time low counts as matching it.
+    if current is not None and current <= low_amt + 0.01:
+        return "🔥 matches all-time low"
+    return f"all-time low was {fmt_eur(low_amt)}{when}"
+
+
+def enrich_with_itad(on_sale):
+    """Attach an 'itad' tag to each sale in-place. No-op without an API key.
+
+    Fully degradable: any lookup/fetch failure simply leaves tags unset and the
+    digest still posts normally.
+    """
+    if not ITAD_API_KEY or not on_sale:
+        return
+
+    id_map = {}
+    for appid in on_sale:
+        try:
+            gid = itad_lookup(appid)
+        except Exception as exc:
+            print(f"warning: ITAD lookup failed for {appid}: {exc}", file=sys.stderr)
+            gid = None
+        if gid:
+            id_map[appid] = gid
+
+    if not id_map:
+        return
+
+    try:
+        lows = itad_historylow(list(id_map.values()))
+    except Exception as exc:
+        print(f"warning: ITAD historylow failed: {exc}", file=sys.stderr)
+        return
+
+    for appid, gid in id_map.items():
+        low = lows.get(gid)
+        if low:
+            try:
+                on_sale[appid]["itad"] = itad_tag(on_sale[appid], low)
+            except Exception as exc:
+                print(f"warning: ITAD tag failed for {appid}: {exc}", file=sys.stderr)
 
 
 # --- State --------------------------------------------------------------------
@@ -147,6 +245,8 @@ def fmt_line(info, show_time=False):
     if info["end_ts"]:
         end = datetime.fromtimestamp(info["end_ts"])
         line += f" · ends {end.strftime('%H:%M today' if show_time else '%a %d %b')}"
+    if info.get("itad"):
+        line += f" · {info['itad']}"
     return line
 
 
@@ -229,6 +329,10 @@ def main():
         save_state({"on_sale": list(on_sale.keys())})
         print("no new or ending-today sales; nothing posted")
         return 0
+
+    # Tag each sale with all-time-low context (no-op unless ITAD_API_KEY is set).
+    # new/ending/current all reference the same dicts, so this reaches every line.
+    enrich_with_itad(on_sale)
 
     blocks = build_blocks(new, ending, current, today.strftime("%A, %d %B %Y"))
     text = f"Daily Steam sales: {len(new)} new, {len(ending)} ending today ({len(current)} on sale)"

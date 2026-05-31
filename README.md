@@ -50,7 +50,15 @@ Optional (defaults shown):
 export DISCOUNT_THRESHOLD=25     # a title counts as "on sale" only at/above this %
 export STEAM_CC=DE               # region -> currency (DE = EUR)
 export STEAM_LANG=english        # language of title names
+export ITAD_API_KEY=...          # optional: tag each sale with all-time-low context
 ```
+
+### 4. (Optional) IsThereAnyDeal enrichment
+Set `ITAD_API_KEY` to a free key from https://isthereanydeal.com/apps/my/ to tag
+each sale line with how the price compares to its all-time low — either
+`🔥 matches all-time low` or `all-time low was 4,99€ (Nov 2024)`. Leave it unset
+to disable. It's fully degradable: no key or a failed lookup just omits the tag,
+and the digest still posts.
 
 ## Run / test
 
@@ -82,6 +90,9 @@ Adjust the path to wherever you place the folder.
 - **Threshold** applies to all three sections — a 10%-off title won't appear.
   Lower `DISCOUNT_THRESHOLD` to widen the net.
 - **Free / unpriced / undiscounted titles** are simply omitted.
+- **ITAD tag** (if `ITAD_API_KEY` is set) appends all-time-low context to each
+  sale line. Prices/currency follow `STEAM_CC`. Adds one lookup per on-sale title
+  plus one batched history-low call, only on days a digest is posted.
 - The `GetItems` endpoint is unofficial but the same one the store front-end
   uses; it batches up to 50 appids per call.
 

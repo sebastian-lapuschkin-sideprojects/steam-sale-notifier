@@ -3,6 +3,9 @@
   "titles": [
     { "appid": 489830,  "name": "The Elder Scrolls V: Skyrim Special Edition" },
     { "appid": 292030,  "name": "The Witcher 3: Wild Hunt" },
-    { "appid": 1086940, "name": "Baldur's Gate 3" }
+    { "appid": 1086940, "name": "Baldur's Gate 3" },
+    { "appid": 813780,  "name": "Age of Empires II: Definitive Edition" },
+    { "appid": 548430,  "name": "Deep Rock Galactic" },
+    { "appid": 285900,  "name": "Gang Beasts" }
   ]
 }
