@@ -96,6 +96,36 @@ Adjust the path to wherever you place the folder.
 - The `GetItems` endpoint is unofficial but the same one the store front-end
   uses; it batches up to 50 appids per call.
 
+## Second mode: availability watcher (`availability.py`)
+
+Watches "coming soon" items — upcoming **games or hardware** (Steam Frame,
+Steam Machine, …) — and posts when one becomes **purchasable** or gets a
+**release-date change**. Same `GetItems` endpoint, same Slack webhook; its own
+`watchlist.json` and `availability_state.json`.
+
+The signal is the presence of a `best_purchase_option` in the GetItems response
+— "purchasable" regardless of game vs. hardware. An item that's already
+purchasable the first time it's seen is alerted once.
+
+```sh
+python3 availability.py --dry-run   # preview, posts nothing, no state change
+python3 availability.py             # posts to Slack and updates availability_state.json
+```
+
+Edit `watchlist.json` (appid + name). Cron example, daily at 09:00:
+
+```cron
+0 9 * * * SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXX/YYY/ZZZ" /usr/bin/python3 /opt/steam-sale-notifier/availability.py >> /var/log/steam-availability.log 2>&1
+```
+
+- **When it posts:** only when something changes — an item becomes purchasable,
+  or its release-date message changes. Otherwise silent (state still updated).
+- **Already-available items** are alerted on first run, then go quiet. Delete
+  `availability_state.json` to re-baseline.
+- **Poll more often near a launch** if you want a faster alert (e.g. hourly):
+  swap the cron to `0 * * * *`. "Purchasable" means *listed for sale* — it does
+  not guarantee in-stock.
+
 ---
 
 *This project was written with Claude Opus 4.8 (Anthropic).*

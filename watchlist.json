@@ -1,0 +1,9 @@
+{
+  "_comment": "Items to watch for availability (coming-soon games or hardware). appid is the number in the store URL. The watcher alerts when an item becomes purchasable, or when its release date changes. Items already purchasable when first seen are alerted once.",
+  "items": [
+    { "appid": 4165890, "name": "Steam Frame" },
+    { "appid": 4165910, "name": "Steam Machine" },
+    { "appid": 4165870, "name": "Steam Controller" },
+    { "appid": 3847920, "name": "Wild n Chill" }
+  ]
+}

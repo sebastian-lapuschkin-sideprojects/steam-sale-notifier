@@ -1,5 +1,7 @@
 state.json
 state.json.tmp
+availability_state.json
+availability_state.json.tmp
 __pycache__/
 *.pyc
 .env
