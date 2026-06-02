@@ -1,11 +1,73 @@
 {
   "_comment": "Hand-curated watch list. appid is the number in a title's store URL, e.g. https://store.steampowered.com/app/489830 -> 489830. 'name' is only a fallback label; the live name is pulled from Steam. Replace the examples below with your titles.",
   "titles": [
-    { "appid": 489830,  "name": "The Elder Scrolls V: Skyrim Special Edition" },
-    { "appid": 292030,  "name": "The Witcher 3: Wild Hunt" },
-    { "appid": 1086940, "name": "Baldur's Gate 3" },
-    { "appid": 813780,  "name": "Age of Empires II: Definitive Edition" },
-    { "appid": 548430,  "name": "Deep Rock Galactic" },
-    { "appid": 285900,  "name": "Gang Beasts" }
+    {
+      "appid": 813780,
+      "name": "Age of Empires II: Definitive Edition"
+    },
+    {
+      "appid": 1086940,
+      "name": "Baldur's Gate 3"
+    },
+    {
+      "appid": 548430,
+      "name": "Deep Rock Galactic"
+    },
+    {
+      "appid": 2483190,
+      "name": "Forza Horizon 6"
+    },
+    {
+      "appid": 285900,
+      "name": "Gang Beasts"
+    },
+    {
+      "appid": 1426210,
+      "name": "It Takes Two"
+    },
+    {
+      "appid": 550,
+      "name": "Left 4 Dead 2"
+    },
+    {
+      "appid": 448510,
+      "name": "Overcooked"
+    },
+    {
+      "appid": 728880,
+      "name": "Overcooked! 2"
+    },
+    {
+      "appid": 1509960,
+      "name": "PICO PARK"
+    },
+    {
+      "appid": 2644470,
+      "name": "PICO PARK 2"
+    },
+    {
+      "appid": 2001120,
+      "name": "Split Fiction"
+    },
+    {
+      "appid": 22320,
+      "name": "The Elder Scrolls III: Morrowind® Game of the Year Edition"
+    },
+    {
+      "appid": 489830,
+      "name": "The Elder Scrolls V: Skyrim Special Edition"
+    },
+    {
+      "appid": 292030,
+      "name": "The Witcher 3: Wild Hunt"
+    },
+    {
+      "appid": 1730700,
+      "name": "We Love Katamari REROLL+ Royal Reverie"
+    },
+    {
+      "appid": 3847920,
+      "name": "Wild n Chill"
+    }
   ]
 }
